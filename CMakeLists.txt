@@ -144,6 +144,7 @@ set(SQLB_MOC_HDR
 	src/FileExtensionManager.h
 	src/CipherSettings.h
 	src/DotenvFormat.h
+	src/RunSql.h
 )
 
 set(SQLB_SRC
@@ -191,6 +192,7 @@ set(SQLB_SRC
 	src/Data.cpp
 	src/CipherSettings.cpp
 	src/DotenvFormat.cpp
+	src/RunSql.cpp
 )
 
 set(SQLB_FORMS
