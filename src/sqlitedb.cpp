@@ -15,6 +15,7 @@
 #include <QDir>
 #include <QDateTime>
 #include <QDebug>
+#include <QThread>
 #include <functional>
 #include <atomic>
 #include <algorithm>
@@ -599,12 +600,12 @@ bool DBBrowserDB::close()
     return true;
 }
 
-DBBrowserDB::db_pointer_type DBBrowserDB::get(QString user)
+DBBrowserDB::db_pointer_type DBBrowserDB::get(QString user, bool force_wait)
 {
     if(!_db)
         return nullptr;
 
-    waitForDbRelease();
+    waitForDbRelease(force_wait);
 
     db_user = user;
     db_used = true;
@@ -612,28 +613,37 @@ DBBrowserDB::db_pointer_type DBBrowserDB::get(QString user)
     return db_pointer_type(_db, DatabaseReleaser(this));
 }
 
-void DBBrowserDB::waitForDbRelease()
+void DBBrowserDB::waitForDbRelease(bool force_wait)
 {
     if(!_db)
         return;
 
+    // We can't show a message box from another thread than the main thread. So instead of crashing we
+    // just decide that we don't interrupt any running query in this case.
+    if(QThread::currentThread() != QApplication::instance()->thread())
+        force_wait = true;
+
     std::unique_lock<std::mutex> lk(m);
     while(db_used) {
-        // notify user, give him the opportunity to cancel that
-        auto str = db_user;
-        lk.unlock();
+        if(!force_wait)
+        {
+            // notify user, give him the opportunity to cancel that
+            auto str = db_user;
+            lk.unlock();
 
-        QMessageBox msgBox;
-        msgBox.setText(tr("The database is currently busy: ") + str);
-        msgBox.setInformativeText(tr("Do you want to abort that other operation?"));
-        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-        msgBox.setDefaultButton(QMessageBox::No);
-        int ret = msgBox.exec();
+            QMessageBox msgBox;
+            msgBox.setText(tr("The database is currently busy: ") + str);
+            msgBox.setInformativeText(tr("Do you want to abort that other operation?"));
+            msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+            msgBox.setDefaultButton(QMessageBox::No);
+            int ret = msgBox.exec();
 
-        if(ret == QMessageBox::Yes)
-            sqlite3_interrupt(_db);
+            if(ret == QMessageBox::Yes)
+                sqlite3_interrupt(_db);
 
-        lk.lock();
+            lk.lock();
+        }
+
         cv.wait(lk, [this](){ return !db_used; });
     }
 }

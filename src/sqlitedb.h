@@ -81,10 +81,13 @@ public:
        \param user a string that identifies the new user, and which
        can be displayed in the dialog box.
 
+       \param force_wait if set to true we won't ask the user to cancel
+       the running query but just wait until it is done.
+
        \returns a unique_ptr containing the SQLite database handle, or
        nullptr in case no database is open.
     **/
-    db_pointer_type get (QString user);
+    db_pointer_type get (QString user, bool force_wait = false);
 
     bool setSavepoint(const QString& pointname = "RESTOREPOINT");
     bool releaseSavepoint(const QString& pointname = "RESTOREPOINT");
@@ -214,7 +217,10 @@ private:
     /// wait for release of the DB locked through a previous get(),
     /// giving users the option to discard running task through a
     /// message box.
-    void waitForDbRelease();
+    ///
+    /// \param force_wait if set to true we won't ask the user to cancel
+    /// the running query but just wait until it is done.
+    void waitForDbRelease(bool force_wait = false);
 
     QString curDBFilename;
     QString lastErrorMessage;

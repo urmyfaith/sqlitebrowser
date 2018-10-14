@@ -3,7 +3,9 @@
 
 #include "sqlitedb.h"
 #include "PlotDock.h"
+#include "RunSql.h"
 
+#include <memory>
 #include <QMainWindow>
 #include <QMap>
 
@@ -159,6 +161,8 @@ private:
     QIntValidator* gotoValidator;
 
     QString defaultBrowseTableEncoding;
+
+    std::unique_ptr<RunSql> execute_sql_worker;
 
     void init();
     void clearCompleterModelsFields();
